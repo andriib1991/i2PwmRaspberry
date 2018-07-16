@@ -1,55 +1,52 @@
-# I2C Pins
-# GPIO2 -> SDA
-# GPIO3 -> SCL
-
-# Import the Library Requreid
 import smbus
 import time
 
-# for RPI version 1, use "bus = smbus.SMBus(0)"
-bus = smbus.SMBus(1)
+class I2C:
+    def __init__(self, bus):
+        self.bus = smbus.SMBus(bus)
+        pass
 
-# This is the address we setup in the Arduino Program
-# Slave Address 1
-# address = 0x04
+    def write_number(self, i2c_slave_address, first_byte_address, value_for_send):
+        bytes_for_send = self.int_to_bytes(value_for_send, 2)
+        self.bus.write_block_data(i2c_slave_address, first_byte_address, bytes_for_send)
 
-# Slave Address 2
-address_2 = 0x05
+    def read_number(self, i2c_slave_address):
+        # number = bus.read_byte(address)
+        number = self.bus.read_byte_data(i2c_slave_address, 1)
+        return number
 
+    @staticmethod
+    def bytes_to_int(byte_list):
+        result = 0
+        for b in byte_list:
+            result = result * 256 + int(b)
+        return result
 
-# write 2 bytes number
-def write_number(value):
-    # bus.write_byte(address_2, value)
-    bytes_for_send = int_to_bytes(value, 2)
-    bus.write_block_data(address_2, 0x00, bytes_for_send)
-    return -1
-
-def bytes_to_int(byte_list):
-    result = 0
-    for b in byte_list:
-        result = result * 256 + int(b)
-    return result
-
-def int_to_bytes(value, length):
-    result = []
-    for i in range(0, length):
-        result.append(value >> (i * 8) & 0xff)
-    result.reverse()
-    return result
-
-def read_number():
-    # number = bus.read_byte(address)
-    number = bus.read_byte_data(address_2, 1)
-    return number
+    @staticmethod
+    def int_to_bytes(value, length):
+        result = []
+        for i in range(0, length):
+            result.append(value >> (i * 8) & 0xff)
+        result.reverse()
+        return result
 
 
-while True:
-    # Receives the data from the User
-    data = input("Enter the data to be sent : ")
-    data_list = [int(data)]
-    for i in data_list:
-        # Sends to the Slaves
-        write_number(i)
+class ServoMotor:
+    def __init__(self, index, i2c, i2c_address):
+        self.index = index
+        self.i2c_address = i2c_address
+        self.i2c = i2c
+
+    def turn_to_angle(self, angle):
+        self.i2c.write_number(self.i2c_address, self.index, angle)
+
+
+if __name__ == "__main__":
+    i2c = I2C(1)
+    motor = ServoMotor(0, i2c, 0x05)
+
+    while True:
+        data = input("Enter the angle : ")
+        angle = [int(data)]
+        motor.turn_to_angle(angle)
         time.sleep(.1)
-
-    # writeNumber(int(0x0A))
